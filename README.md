@@ -12,4 +12,7 @@ Tettu0530が作成したDiscordBotであるZeTNONのソースです。
 - **実行時にはmain.pyの最終行にある"bot.run(TEST_TOKEN)"を"bot.run(TOKEN)"に書き換えてください**
 
 ライセンス
+
 **GNU GPL V3.0**(LISENCE参照)
+
+(要するに「自己責任で使え」「著作権の表示は消すな」「複製・改変・再配布・販売等は自由にやれ」「再配布する物もGPLライセンスにしろ」です)
