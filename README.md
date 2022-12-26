@@ -10,3 +10,6 @@ Tettu0530が作成したDiscordBotであるZeTNONのソースです。
   - [user_id1, user_id2, user_id3, ...]
 - ターミナルから"python3 main.py"をと実行してください(Windowsユーザーの場合は"python main.py")です
 - **実行時にはmain.pyの最終行にある"bot.run(TEST_TOKEN)"を"bot.run(TOKEN)"に書き換えてください**
+
+ライセンス
+**GNU GPL V3.0**(LISENCE参照)
