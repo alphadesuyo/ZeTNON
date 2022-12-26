@@ -1,0 +1,1 @@
+{"username": "Tettu0530", "password": "KOIAdAta0530", "user_id": "1044937269162823751", "subscription": "True", "regist_time": "2022-12-13_19-16-41"}
