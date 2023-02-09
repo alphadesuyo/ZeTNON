@@ -27,7 +27,7 @@ class TicketCloseReasonModal(discord.ui.Modal):
         self.add_item(self.reason)
 
     async def on_submit(self, interaction: discord.Interaction) -> None:
-        if os.path.isfile(f"file/ticket/{str(interaction.guild_id)}.txt") is True:
+        if os.path.isfile(f"file/ticket/{interaction.guild_id}.json") is True:
             embed_closed = discord.Embed(
                 title="**Ticket Closed**", color=0xff0000)
             embed_closed.add_field(
@@ -76,7 +76,7 @@ class TicketCloseConfirmButtonView(discord.ui.View):
     @discord.ui.button(label="⭕はい", style=discord.ButtonStyle.secondary, custom_id="persistent_view:btn_ticketclose_confirm")
     async def callback_closeconfirm(self, button: discord.Button, interaction: discord.Interaction):
         if self.is_reason is False:
-            if os.path.isfile(f"file/ticket/{str(button.guild_id)}.txt") is True:
+            if os.path.isfile(f"file/ticket/{button.guild.id}.json") is True:
                 embed_closed = discord.Embed(
                     title="**Ticket Closed**", color=0xff0000)
                 embed_closed.add_field(
@@ -149,6 +149,14 @@ class TicketButtonView(discord.ui.View):
 
     @discord.ui.button(label="🎫チケットを開く", style=discord.ButtonStyle.primary, custom_id="persistent_view:btn_ticket")
     async def callback_ticket(self, button: discord.Button, interaction: discord.Interaction):
+        if os.path.isfile(f"file/ticket/{str(button.guild.id)}.json"):
+            with open(f"file/ticket/{str(button.guild.id)}.json", "r") as f:
+                data = json.load(f)
+                ch_list = []
+                for i in button.guild.channels:
+                    ch_list.append(i.name)
+                if ch_list.count(f"ticket-{button.user.name}".lower()) >= data["ticket_limit"]:
+                    return await button.response.send_message("これ以上チケットを作ることができません。", ephemeral=True)
         ch_name = f"ticket-{button.user.name}"
         overwrites = {
             button.guild.default_role: discord.PermissionOverwrite(read_messages=False),
@@ -157,12 +165,12 @@ class TicketButtonView(discord.ui.View):
         newch = await button.channel.category.create_text_channel(name=ch_name, overwrites=overwrites)
         await button.response.send_message(f"{newch.mention} を作成しました。", ephemeral=True)
         close_embed = discord.Embed(
-            title="チケット", description="チケットを開きました。\n問い合わせ内容を記入し、スタッフからの対応をお待ちください。\nチケットを閉じるには下のボタンを押してください。")
+            title="チケット", description="チケットを開きました。\n問い合わせ内容を記入し、スタッフからの対応をお待ちください。\nチケットを閉じるには下のボタンを押してください。\n`このチケットを担当する`ボタンは、押さないでください。")
         close_embed.set_footer(text="Status - 200 | Made by Tettu0530New#7110",
                                icon_url="https://cdn.discordapp.com/avatars/941871491337814056/fb276cd1dc430e643f233594564e0559.webp?size=128")
         await newch.send(f"{button.user.mention}", embed=close_embed, view=TicketCloseButtonView(bot=self.bot))
 
-        if os.path.isfile(f"file/ticket/{button.guild.id}.txt") is True:
+        if os.path.isfile(f"file/ticket/{button.guild.id}.json") is True:
             embed_closed = discord.Embed(
                 title="**Ticket Opened**", color=0x00ff00)
             embed_closed.add_field(
@@ -177,7 +185,7 @@ class TicketButtonView(discord.ui.View):
             embed_closed.set_footer(text="Status - 200 | Made by Tettu0530New#7110",
                                     icon_url="https://cdn.discordapp.com/avatars/941871491337814056/fb276cd1dc430e643f233594564e0559.webp?size=128")
             try:
-                with open(f"file/ticket/{button.guild.id}.txt", "r") as f:
+                with open(f"file/ticket/{button.guild.id}.json", "r") as f:
                     json_ticket_info = json.load(f)
                     logs_channel = self.bot.get_channel(json_ticket_info["logs_channel"])
                     if logs_channel is None:
@@ -209,6 +217,7 @@ class TicketCog(commands.Cog):
         name="set",
         description="チケットパネルを設置できます"
     )
+    @app_commands.checks.cooldown(1, 5.0, key=lambda i: (i.guild_id, i.user.id))
     @app_commands.describe(title="チケットパネルのタイトルを設定できます")
     @app_commands.describe(description="チケットパネルの説明を設定できます")
     @app_commands.describe(picture="チケットパネルの写真を設定できます")
@@ -228,12 +237,15 @@ class TicketCog(commands.Cog):
             panel_embed.set_image(url=picture.url)
         panel_embed.set_footer(text="Status - 200 | Made by Tettu0530New#7110",
                                icon_url="https://cdn.discordapp.com/avatars/941871491337814056/fb276cd1dc430e643f233594564e0559.webp?size=128")
-        embed_success = discord.Embed(
-            title="✅Success - Ticket", description="チケットパネルの設置に成功しました。", color=0x00ff00)
-        embed_success.set_footer(text="Status - 200 | Made by Tettu0530New#7110",
-                                 icon_url="https://cdn.discordapp.com/avatars/941871491337814056/fb276cd1dc430e643f233594564e0559.webp?size=128")
-        await interaction.response.send_message(embed=embed_success, ephemeral=True)
+        await interaction.response.defer()
+        await asyncio.sleep(3)
         await interaction.followup.send(embed=panel_embed, view=TicketButtonView(bot=self.bot))
+        print(f"[{datetime.datetime.now(tz=pytz.timezone('Asia/Tokyo')).strftime('%Y/%m/%d %H:%M:%S')}]{interaction.user.name}(ID:{interaction.user.id})がticketコマンドを使用しました。")
+    
+    @ticket_Set.error
+    async def on_ticket_set_error(interaction: discord.Interaction, error: app_commands.AppCommandError):
+        if isinstance(error, app_commands.CommandOnCooldown):
+            await interaction.response.send_message("コマンドはクールダウン中です！", ephemeral=True)
 
     @ticket.command(
         name="config",
@@ -241,21 +253,22 @@ class TicketCog(commands.Cog):
     )
     @app_commands.describe(notify="チケットが開いた時に管理者をを通知するかどうか")
     @app_commands.describe(logs_channel="チケットログチャンネルを設定するかどうか")
-    async def ticket_config(self, interaction: discord.Interaction, notify: discord.Role = None, logs_channel: discord.TextChannel = None):
+    @app_commands.describe(ticket_limit="一人当たり最大何チケットまでチケットを開けるか")
+    async def ticket_config(self, interaction: discord.Interaction, notify: discord.Role = None, logs_channel: discord.TextChannel = None, ticket_limit: int = None):
         await interaction.response.send_message("処理中...", ephemeral=True)
         await asyncio.sleep(1)
         if notify is None:
             pass
         else:
             try:
-                with open(f"file/ticket/{str(interaction.guild_id)}.txt", "r") as f:
+                with open(f"file/ticket/{str(interaction.guild_id)}.json", "r") as f:
                     content = json.load(f)
-                    with open(f"file/ticket/{str(interaction.guild_id)}.txt", "w", encoding="utf-8") as f2:
+                    with open(f"file/ticket/{str(interaction.guild_id)}.json", "w", encoding="utf-8") as f2:
                         content["notify"] = notify.id
                         json.dump(content, f2)
                 await interaction.followup.send("登録しました。\nNotify: {}(RoleID: {})".format(notify.mention, str(notify.id)), ephemeral=True)
             except FileNotFoundError:
-                with open(f"file/ticket/{str(interaction.guild_id)}.txt", "w", encoding="utf-8") as f3:
+                with open(f"file/ticket/{str(interaction.guild_id)}.json", "w", encoding="utf-8") as f3:
                     content = {
                         "guild_id": interaction.guild_id,
                         "notify": notify.id
@@ -266,26 +279,44 @@ class TicketCog(commands.Cog):
             pass
         else:
             try:
-                with open(f"file/ticket/{str(interaction.guild_id)}.txt", "r") as f:
+                with open(f"file/ticket/{str(interaction.guild_id)}.json", "r") as f:
                     content = json.load(f)
-                    with open(f"file/ticket/{str(interaction.guild_id)}.txt", "w", encoding="utf-8") as f4:
+                    with open(f"file/ticket/{str(interaction.guild_id)}.json", "w", encoding="utf-8") as f4:
                         content["logs_channel"] = logs_channel.id
                         json.dump(content, f4)
                 await interaction.followup.send("登録しました。\nLogChannel: {}(ChannelID: {})".format(logs_channel.mention, str(logs_channel.id)), ephemeral=True)
             except FileNotFoundError:
-                with open(f"file/ticket/{str(interaction.guild_id)}.txt", "w", encoding="utf-8") as f5:
+                with open(f"file/ticket/{str(interaction.guild_id)}.json", "w", encoding="utf-8") as f5:
                     content = {
                         "guild_id": interaction.guild_id,
                         "logs_channel": logs_channel.id
                     }
                     json.dump(content, f5)
                 await interaction.followup.send("登録しました。\nLogChannel: {}(ChannelID: {})".format(logs_channel.mention, str(logs_channel.id)), ephemeral=True)
-        if notify is None and logs_channel is None:
+        if ticket_limit is None:
+            pass
+        else:
+            try:
+                with open(f"file/ticket/{str(interaction.guild_id)}.json", "r") as f:
+                    content = json.load(f)
+                    with open(f"file/ticket/{str(interaction.guild_id)}.json", "w", encoding="utf-8") as f4:
+                        content["ticket_limit"] = ticket_limit
+                        json.dump(content, f4)
+                await interaction.followup.send("登録しました。\nTicketLimit: {}".format(str(ticket_limit)), ephemeral=True)
+            except FileNotFoundError:
+                with open(f"file/ticket/{str(interaction.guild_id)}.json", "w", encoding="utf-8") as f5:
+                    content = {
+                        "guild_id": interaction.guild_id,
+                        "ticket_limit": ticket_limit
+                    }
+                    json.dump(content, f5)
+            await interaction.followup.send("登録しました。\nTicketLimit: {}".format(str(ticket_limit)), ephemeral=True)
+        if notify is None and logs_channel is None and ticket_limit is None:
             embed = discord.Embed(title="❌ Failure - TicketConfig",
-                                  description="エラーが発生しました。\n必要な引数(notifyまたはlogs_channel)を入力してください", color=0xff0000)
+                                  description="エラーが発生しました。\n必要な引数(`notify`or`logs_channel`or`ticket_limit`)を入力してください", color=0xff0000)
             embed.set_footer(text="Status - 200 | Made by Tettu0530New#7110",
                              icon_url="https://cdn.discordapp.com/avatars/941871491337814056/fb276cd1dc430e643f233594564e0559.webp?size=128")
-            await interaction.response.send_message(embed=embed, ephemeral=True)
+            return await interaction.followup.send(embed=embed, ephemeral=True)
 
 
 async def setup(bot: commands.Bot):

@@ -36,7 +36,7 @@ class InfoCog(commands.Cog):
         boost_level = guild.premium_tier
         boosts = str(guild.premium_subscription_count)
         icon = guild.icon
-        icon_url = f"https://cdn.discordapp.com/icons/{interaction.guild_id}/{icon}.webp?size"
+        icon_url = f"https://cdn.discordapp.com/icons/{ctx.guild.id}/{icon}.webp?size"
         user_count = sum(1 for member in guild.members if not member.bot)
         bot_count = sum(1 for member in guild.members if member.bot)
         embed = discord.Embed(title="✅ Succeess - Guild", color=0x00ff00)

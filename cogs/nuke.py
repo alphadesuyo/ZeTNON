@@ -1,5 +1,7 @@
 # Import General Package
 import asyncio
+import datetime
+import pytz
 
 # Import Discord Package
 import discord
@@ -14,26 +16,36 @@ class NukeConfirmButtonView(discord.ui.View):
 
     @discord.ui.button(label="💥消去 | NUKE", style=discord.ButtonStyle.danger, custom_id="persistent_view:btn_nukeallow")
     async def callback_nukeallow(self, button: discord.ui.Button, interaction: discord.Interaction):
-        try:
-            newch = await button.channel.category.create_text_channel(name=button.channel.name, position=button.channel.position, overwrites=button.channel.overwrites)
-            await button.channel.delete()
-            embed_cleaned = discord.Embed(
-                title="✅ Success - Nuke", description="正常にチャンネルログを消去しました。\nこのメッセージは10秒後に消去されます", color=0x00ff00)
-            embed_cleaned.set_footer(text="Status - 200 | Made by Tettu0530#0530",
-                                     icon_url="https://cdn.discordapp.com/avatars/941871491337814056/fb276cd1dc430e643f233594564e0559.webp?size=128")
-            i = await newch.send(embed=embed_cleaned)
-            await asyncio.sleep(10)
-            await i.delete()
-        except:
-            newch = await button.guild.create_text_channel(name=button.channel.name, position=button.channel.position, overwrites=button.channel.overwrites)
-            await button.channel.delete()
-            embed_cleaned = discord.Embed(
-                title="✅ Success - Nuke", description="正常にチャンネルログを消去しました。\nこのメッセージは10秒後に消去されます", color=0x00ff00)
-            embed_cleaned.set_footer(text="Status - 200 | Made by Tettu0530#0530",
-                                     icon_url="https://cdn.discordapp.com/avatars/941871491337814056/fb276cd1dc430e643f233594564e0559.webp?size=128")
-            i = await newch.send(embed=embed_cleaned)
-            await asyncio.sleep(10)
-            await i.delete()
+        if button.user.guild_permissions.manage_messages:
+            try:
+                if button.channel.topic is None:
+                    topic = None
+                else:
+                    topic = button.channel.topic
+                newch = await button.channel.category.create_text_channel(name=button.channel.name, position=button.channel.position, overwrites=button.channel.overwrites, topic=topic)
+                await button.channel.delete()
+                embed_cleaned = discord.Embed(
+                    title="✅ Success - Nuke", description="正常にチャンネルログを消去しました。\nこのメッセージは10秒後に消去されます", color=0x00ff00)
+                embed_cleaned.set_footer(text="Status - 200 | Made by Tettu0530#0530",
+                                         icon_url="https://cdn.discordapp.com/avatars/941871491337814056/fb276cd1dc430e643f233594564e0559.webp?size=128")
+                i = await newch.send(embed=embed_cleaned)
+                await asyncio.sleep(10)
+                await i.delete()
+            except:
+                if button.channel.topic is None:
+                    topic = None
+                else:
+                    topic = button.channel.topic
+                newch = await button.guild.create_text_channel(name=button.channel.name, position=button.channel.position, overwrites=button.channel.overwrites, topic=topic)
+                await button.channel.delete()
+                embed_cleaned = discord.Embed(
+                    title="✅ Success - Nuke", description="正常にチャンネルログを消去しました。\nこのメッセージは10秒後に消去されます", color=0x00ff00)
+                embed_cleaned.set_footer(text="Status - 200 | Made by Tettu0530#0530",
+                                         icon_url="https://cdn.discordapp.com/avatars/941871491337814056/fb276cd1dc430e643f233594564e0559.webp?size=128")
+                i = await newch.send(embed=embed_cleaned)
+                await asyncio.sleep(10)
+                await i.delete()
+            print(f"[{datetime.datetime.now(tz=pytz.timezone('Asia/Tokyo')).strftime('%Y/%m/%d %H:%M:%S')}]{button.user.name}(ID:{button.user.id})がnukeコマンドをサーバー:{str(button.guild_id)}で使用しました。")
 
     @discord.ui.button(label="❌キャンセル | CANCEL", style=discord.ButtonStyle.primary, custom_id="persistent_view:btn_nukedeny")
     async def callback_nukedeny(self, button: discord.ui.Button, interaction: discord.Interaction):

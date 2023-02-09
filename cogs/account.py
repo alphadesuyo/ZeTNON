@@ -5,6 +5,7 @@ import os
 import datetime
 import pytz
 import shutil
+from PayPayPy import PayPay
 
 # Import Discord Package
 import discord
@@ -48,21 +49,21 @@ class AccountRegisterModal(discord.ui.Modal):
         if self.password.value == self.password_2.value:
             if os.path.isdir(f"file/account/{self.username.value}") is False:
                 os.mkdir(f"file/account/{self.username.value}")
-                with open(f"file/account/{self.username.value}/info.txt", "w", encoding="utf-8") as f:
+                with open(f"file/account/{self.username.value}/info.json", "w", encoding="utf-8") as f:
                     now = datetime.datetime.now(tz=pytz.timezone(
                         "Asia/Tokyo")).strftime("%Y-%m-%d_%H-%M-%S")
-                    content = {"username": self.username.value,
+                    data = {"username": self.username.value,
                                "password": self.password.value,
                                "user_id": interaction.user.id,
                                "user_avatar": interaction.user.avatar.url,
-                               "subscription": "False",
+                               "subscription": False,
                                "regist_time": now}
-                    json.dump(content, f)
-                with open(f"file/account/{self.username.value}/info.txt", "r") as f:
-                    content1 = json.load(f)
-                    content1["password"] = self.password.value
+                    json.dump(data, f)
+                with open(f"file/account/{self.username.value}/info.json", "r") as f:
+                    data1 = json.load(f)
+                    data1["password"] = self.password.value
                     embed = discord.Embed(
-                        title="✅ Success - Register", description=f"ZeTNONアカウントを登録しました。\n```\nユーザー名: {content1['username']}\nパスワード: {content1['password']}\n登録日時: {content1['regist_time']}\nDiscordUserID: {str(content1['user_id'])}\n```")
+                        title="✅ Success - Register", description=f"ZeTNONアカウントを登録しました。\n```\nユーザー名: {data1['username']}\nパスワード: {data1['password']}\n登録日時: {data1['regist_time']}\nDiscordUserID: {str(data1['user_id'])}\n```")
                     embed.set_footer(text="Status - 200 | Made by Tettu0530New#7110",
                                      icon_url="https://cdn.discordapp.com/avatars/941871491337814056/fb276cd1dc430e643f233594564e0559.webp?size=128")
                     await interaction.response.send_message(embed=embed, ephemeral=True)
@@ -76,7 +77,7 @@ class AccountRegisterModal(discord.ui.Modal):
             await interaction.response.send_message("再入力パスワードが違います。もう一度やり直してください。", ephemeral=True)
 
 
-class AccountLoginModal(discord.ui.Modal):
+class AccountInfoModal_KeepLogin(discord.ui.Modal):
     def __init__(self, bot: commands.Bot):
         super().__init__(
             title="ログイン | Login",
@@ -102,20 +103,20 @@ class AccountLoginModal(discord.ui.Modal):
 
     async def on_submit(self, interaction: discord.Interaction) -> None:
         try:
-            with open(f"file/account/{self.username.value}/info.txt", "r") as f:
-                content = json.load(f)
-                if content["username"] == self.username.value:
-                    if content["password"] == self.password.value:
-                        if content["user_id"] == interaction.user.id:
+            with open(f"file/account/{self.username.value}/info.json", "r") as f:
+                data = json.load(f)
+                if data["username"] == self.username.value:
+                    if data["password"] == self.password.value:
+                        if data["user_id"] == interaction.user.id:
                             embed = discord.Embed(
-                                title=f"{content['username']}のZeTNONアカウント")
-                            user = self.bot.get_user(int(content["user_id"]))
-                            embed.set_thumbnail(url=content["user_avatar"])
+                                title=f"{data['username']}のZeTNONアカウント")
+                            user = self.bot.get_user(data["user_id"])
+                            embed.set_thumbnail(url=data["user_avatar"])
                             embed.add_field(
-                                name="ユーザー名", value=f"{content['username']}", inline=False)
+                                name="ユーザー名", value=f"{data['username']}", inline=False)
                             embed.add_field(
                                 name="パスワード", value=f"`機密保護のため閲覧できません`", inline=False)
-                            if content["subscription"] == "True":
+                            if data["subscription"] == True:
                                 embed.add_field(
                                     name="有料プラン", value="有効(永久)", inline=False)
                             else:
@@ -125,7 +126,7 @@ class AccountLoginModal(discord.ui.Modal):
                                 name="登録ユーザー", value=f"{user.mention}", inline=False)
                             embed.set_footer(text="Status - 200 | Made by Tettu0530New#7110",
                                              icon_url="https://cdn.discordapp.com/avatars/941871491337814056/fb276cd1dc430e643f233594564e0559.webp?size=128")
-                            await interaction.response.send_message(embed=embed, ephemeral=True)
+                            await interaction.response.send_message(embed=embed, view=LoginButtonView(bot=self.bot, username=data["username"]), ephemeral=True)
                         else:
                             await interaction.response.send_message("このZeTNONアカウントはあなたのDiscordアカウントと連携されていません。`/account relink`を使ってアカウントを再連携してください", ephemeral=True)
                     else:
@@ -153,17 +154,25 @@ class AccountChangeUserNameModal(discord.ui.Modal):
         self.username = username
 
     async def on_submit(self, interaction: discord.Interaction) -> None:
-        with open(f"file/account/{self.username}/info.txt", "r") as f:
-            content = json.load(f)
-            content2 = {"username": self.new_username.value,
-                               "password": content["password"],
-                               "user_id": interaction.user.id,
-                               "subscription": content["subscription"],
-                               "regist_time": content["regist_time"]}
-            with open(f"file/account/{self.username}/info.txt", "w", encoding="utf-8") as f2:
-                json.dump(content2, f2)
-        os.rename(f"file/account/{self.username}", f"file/account/{self.new_username.value}")
-        await interaction.response.send_message(f"ユーザー名を変更しました。\b`UserName: {self.new_username.value}`", ephemeral=True)
+        if os.path.isfile(f"file/keep_login/{interaction.user.id}.json"):
+            with open(f"file/keep_login/{interaction.user.id}.json", "r") as f1:
+                data = json.load(f1)
+            with open(f"file/keep_login/{interaction.user.id}.json", "r") as f2:
+                data[str(interaction.user.id)] = self.new_username.value
+                json.dump(data)
+        with open(f"file/account/{self.username}/info.json", "r") as f:
+            data = json.load(f)
+            data2 = {"username": self.new_username.value,
+                        "password": data["password"],
+                        "user_id": interaction.user.id,
+                        "user_avatar": interaction.user.avatar.url,
+                        "subscription": data["subscription"],
+                        "regist_time": data["regist_time"]}
+            with open(f"file/account/{self.username}/info.json", "w", encoding="utf-8") as f2:
+                json.dump(data2, f2)
+        os.rename(f"file/account/{self.username}",
+                  f"file/account/{self.new_username.value}")
+        await interaction.response.send_message(f"ユーザー名を変更しました。\n`UserName: {self.new_username.value}`", ephemeral=True)
 
 
 class AccountChangePassWordModal(discord.ui.Modal):
@@ -183,16 +192,17 @@ class AccountChangePassWordModal(discord.ui.Modal):
         self.username = username
 
     async def on_submit(self, interaction: discord.Interaction) -> None:
-            with open(f"file/account/{self.username}/info.txt", "r") as f:
-                content = json.load(f)
-                content2 = {"username": content["username"],
-                                   "password": self.new_password.value,
-                                   "user_id": interaction.user.id,
-                                   "subscription": content["subscription"],
-                                   "regist_time": content["regist_time"]}
-            with open(f"file/account/{self.username}/info.txt", "w", encoding="utf-8") as f2:
-                json.dump(content2, f2)
-            await interaction.response.send_message(f"パスワードを変更しました。\b`PassWord: {self.new_password.value}`", ephemeral=True)
+        with open(f"file/account/{self.username}/info.json", "r") as f:
+            data = json.load(f)
+            data2 = {"username": data["username"],
+                        "password": self.new_password.value,
+                        "user_id": interaction.user.id,
+                        "user_avatar": interaction.user.avatar.url,
+                        "subscription": data["subscription"],
+                        "regist_time": data["regist_time"]}
+        with open(f"file/account/{self.username}/info.json", "w", encoding="utf-8") as f2:
+            json.dump(data2, f2)
+        await interaction.response.send_message(f"パスワードを変更しました。\b`PassWord: {self.new_password.value}`", ephemeral=True)
 
 
 class AccountChangeSelect(discord.ui.Select):
@@ -226,7 +236,7 @@ class AccountChangeSelectView(discord.ui.View):
         self.add_item(AccountChangeSelect(bot=bot, username=username))
 
 
-class AccountLogin2Modal(discord.ui.Modal):
+class AccountChangeModal(discord.ui.Modal):
     def __init__(self, bot: commands.Bot):
         super().__init__(
             title="ログイン | Login",
@@ -252,11 +262,11 @@ class AccountLogin2Modal(discord.ui.Modal):
 
     async def on_submit(self, interaction: discord.Interaction) -> None:
         try:
-            with open(f"file/account/{self.username.value}/info.txt", "r") as f:
-                content = json.load(f)
-                if content["username"] == self.username.value:
-                    if content["password"] == self.password.value:
-                        if content["user_id"] == interaction.user.id:
+            with open(f"file/account/{self.username.value}/info.json", "r") as f:
+                data = json.load(f)
+                if data["username"] == self.username.value:
+                    if data["password"] == self.password.value:
+                        if data["user_id"] == interaction.user.id:
                             await interaction.response.send_message(view=AccountChangeSelectView(bot=self.bot, username=self.username.value), ephemeral=True)
                         else:
                             await interaction.response.send_message("このZeTNONアカウントはあなたのDiscordアカウントと連携されていません。`/account relink`を使ってアカウントを再連携してください", ephemeral=True)
@@ -294,16 +304,60 @@ class AccountSubscriptionPayPayModal(discord.ui.Modal):
         self.username = username
 
     async def on_submit(self, interaction: discord.Interaction) -> None:
-        with open(f"file/account/{self.username}/info.txt", "r") as f:
-            content = json.load(f)
-            if content["subscription"] == "True":
+        with open(f"file/account/{self.username}/info.json", "r") as f:
+            data = json.load(f)
+            if data["subscription"] == True:
                 await interaction.response.send_message("既にZeTNONアカウントが有料化されています。", ephemeral=True)
             else:
-                await interaction.response.send_message("送信しました。数時間以内にアカウントを有料化します。", ephemeral=True)
-                tuvon = self.bot.get_user(994953877625507851)
-                tettu = self.bot.get_user(1044937269162823751)
-                await tuvon.send(f"ZeTNONアカウント有料化\nユーザーID: {str(interaction.user.id)}\nユーザー名: {self.username}\nファイルディレクトリ: `file/account/{self.username}/info.txt`\nPayLink: {self.link.value}\nパスワード: {self.password.value}")
-                await tettu.send(f"ZeTNONアカウント有料化\nユーザーID: {str(interaction.user.id)}\nユーザー名: {self.username}\nファイルディレクトリ: `file/account/{self.username}/info.txt`\nPayLink: {self.link.value}\nパスワード: {self.password.value}")
+                try:
+                    await interaction.response.defer()
+                    with open(f"file/paypay/1044937269162823751.json", "r") as paypay_f:
+                        data = json.load(paypay_f)
+                        paypay = PayPay(data["access_token"])
+                        get_link_info = paypay.get_link(
+                            self.link.value.replace("https://pay.paypay.ne.jp/", ""))
+                        amount = get_link_info.payload.pendingP2PInfo.amount
+                        id = get_link_info.payload.pendingP2PInfo.orderId
+                        image = get_link_info.payload.pendingP2PInfo.imageUrl
+                        if self.password.value != "":
+                            get_pay = paypay.accept_link(self.link.value.replace(
+                                "https://pay.paypay.ne.jp/", ""), self.password.value)
+                        get_pay = paypay.accept_link(
+                            self.link.value.replace("https://pay.paypay.ne.jp/", ""))
+                    if get_pay.payload.orderStatus == "COMPLETED":
+                        embed = discord.Embed(
+                            title="✅ Success - PayPay Link", color=0x00ff00)
+                        embed.set_thumbnail(url=image)
+                        embed.add_field(name="状態", value="完了済み", inline=False)
+                        embed.add_field(
+                            name="金額", value=f"`{amount}円`", inline=False)
+                        embed.add_field(
+                            name="決済ID", value=f"`{id}`", inline=False)
+                        await interaction.followup.send(embed=embed)
+                        with open(f"file/account/{self.username}/info.json", "r") as f:
+                            data = json.load(f)
+                            with open(f"file/account/{self.username}/info.json", "w", encoding="utf-8") as f2:
+                                data2 = {
+                                    "username": data["username"],
+                                    "password": data["password"],
+                                    "user_id": data["user_id"],
+                                    "subscription": True,
+                                    "regist_time": data["regist_time"]
+                                }
+                                json.dump(data2, f2)
+                                await interaction.followup.send("お使いのZeTNONアカウントに有料プランを適応しました。", ephemeral=True)
+                    else:
+                        await interaction.followup.send("送信しました。数時間以内にアカウントを有料化します。", ephemeral=True)
+                        tuvon = self.bot.get_user(994953877625507851)
+                        tettu = self.bot.get_user(1044937269162823751)
+                        await tuvon.send(f"ZeTNONアカウント有料化\nユーザーID: {str(interaction.user.id)}\nユーザー名: {self.username}\nファイルディレクトリ: `file/account/{self.username}/info.json`")
+                        await tettu.send(f"ZeTNONアカウント有料化\nユーザーID: {str(interaction.user.id)}\nユーザー名: {self.username}\nファイルディレクトリ: `file/account/{self.username}/info.json`")
+                except:
+                    await interaction.followup.send("送信しました。数時間以内にアカウントを有料化します。", ephemeral=True)
+                    tuvon = self.bot.get_user(994953877625507851)
+                    tettu = self.bot.get_user(1044937269162823751)
+                    await tuvon.send(f"ZeTNONアカウント有料化\nユーザーID: {str(interaction.user.id)}\nユーザー名: {self.username}\nファイルディレクトリ: `file/account/{self.username}/info.json`\nPayLink: {self.link.value}\nパスワード: {self.password.value}")
+                    await tettu.send(f"ZeTNONアカウント有料化\nユーザーID: {str(interaction.user.id)}\nユーザー名: {self.username}\nファイルディレクトリ: `file/account/{self.username}/info.json`\nPayLink: {self.link.value}\nパスワード: {self.password.value}")
 
 
 class AccountSubscriptionSelect(discord.ui.Select):
@@ -334,7 +388,7 @@ class AccountSubscriptionSelectView(discord.ui.View):
         self.add_item(AccountSubscriptionSelect(bot=bot, username=username))
 
 
-class AccountLogin3Modal(discord.ui.Modal):
+class SubscriptionLoginModal(discord.ui.Modal):
     def __init__(self, bot: commands.Bot):
         super().__init__(
             title="ログイン | Login",
@@ -360,12 +414,12 @@ class AccountLogin3Modal(discord.ui.Modal):
 
     async def on_submit(self, interaction: discord.Interaction) -> None:
         try:
-            with open(f"file/account/{self.username.value}/info.txt", "r") as f:
-                content = json.load(f)
-                if content["username"] == self.username.value:
-                    if content["password"] == self.password.value:
-                        if content["user_id"] == interaction.user.id:
-                            await interaction.response.send_message(view=AccountSubscriptionSelectView(bot=self.bot, username=content["username"]), ephemeral=True)
+            with open(f"file/account/{self.username.value}/info.json", "r") as f:
+                data = json.load(f)
+                if data["username"] == self.username.value:
+                    if data["password"] == self.password.value:
+                        if data["user_id"] == interaction.user.id:
+                            await interaction.response.send_message(view=AccountSubscriptionSelectView(bot=self.bot, username=data["username"]), ephemeral=True)
                         else:
                             await interaction.response.send_message("このZeTNONアカウントはあなたのDiscordアカウントと連携されていません。`/account relink`を使ってアカウントを再連携してください", ephemeral=True)
                     else:
@@ -381,14 +435,16 @@ class AccountDeleteConfirmButtonView(discord.ui.View):
         super().__init__(timeout=None)
         self.bot = bot
         self.username = username
-    
+
     @discord.ui.button(label="消去 | Delete", style=discord.ButtonStyle.danger, custom_id="persistent_view:btn_deleteacc")
     async def callback_delete(self, button: discord.ui.Button, interaction: discord.Interaction):
         shutil.rmtree(f"file/account/{self.username}")
+        if os.path.isfile(f"file/keep_login/{button.user.id}.json"):
+            os.remove(f"file/keep_login/{button.user.id}.json")
         await button.response.send_message("消去しました。", ephemeral=True)
 
 
-class AccountLogin4Modal(discord.ui.Modal):
+class AccountDeleteModal(discord.ui.Modal):
     def __init__(self, bot: commands.Bot):
         super().__init__(
             title="ログイン | Login",
@@ -414,12 +470,12 @@ class AccountLogin4Modal(discord.ui.Modal):
 
     async def on_submit(self, interaction: discord.Interaction) -> None:
         try:
-            with open(f"file/account/{self.username.value}/info.txt", "r") as f:
-                content = json.load(f)
-                if content["username"] == self.username.value:
-                    if content["password"] == self.password.value:
-                        if content["user_id"] == interaction.user.id:
-                            await interaction.response.send_message("本当にアカウントを消去しますか？消去を押した後、**この操作は取り消せません**\n**__この操作に伴い、アカウントに保存されたデータ(バックアップ等)はすべて消去されます。__**", view=AccountDeleteConfirmButtonView(bot=self.bot, username=content["username"]), ephemeral=True)
+            with open(f"file/account/{self.username.value}/info.json", "r") as f:
+                data = json.load(f)
+                if data["username"] == self.username.value:
+                    if data["password"] == self.password.value:
+                        if data["user_id"] == interaction.user.id:
+                            await interaction.response.send_message("本当にアカウントを消去しますか？消去を押した後、**この操作は取り消せません**\n**__この操作に伴い、アカウントに保存されたデータ(バックアップ等)はすべて消去されます。__**", view=AccountDeleteConfirmButtonView(bot=self.bot, username=data["username"]), ephemeral=True)
                         else:
                             await interaction.response.send_message("このZeTNONアカウントはあなたのDiscordアカウントと連携されていません。`/account relink`を使ってアカウントを再連携してください", ephemeral=True)
                     else:
@@ -430,7 +486,7 @@ class AccountLogin4Modal(discord.ui.Modal):
             await interaction.response.send_message("そのZeTNONアカウントは登録されていません。", ephemeral=True)
 
 
-class AccountLogin5Modal(discord.ui.Modal):
+class AccountRelinkModal(discord.ui.Modal):
     def __init__(self, bot: commands.Bot):
         super().__init__(
             title="ログイン | Login",
@@ -456,17 +512,17 @@ class AccountLogin5Modal(discord.ui.Modal):
 
     async def on_submit(self, interaction: discord.Interaction) -> None:
         try:
-            with open(f"file/account/{self.username.value}/info.txt", "r") as f:
-                content = json.load(f)
-                if content["username"] == self.username.value:
-                    if content["password"] == self.password.value:
-                        content2 = {"username": content["username"],
-                               "password": content["password"],
-                               "user_id": interaction.user.id,
-                               "subscription": content["subscription"],
-                               "regist_time": content["regist_time"]}
-                        with open(f"file/account/{self.username.value}/info.txt", "w") as f:
-                            json.dump(content2, f)
+            with open(f"file/account/{self.username.value}/info.json", "r") as f:
+                data = json.load(f)
+                if data["username"] == self.username.value:
+                    if data["password"] == self.password.value:
+                        data2 = {"username": data["username"],
+                                    "password": data["password"],
+                                    "user_id": interaction.user.id,
+                                    "subscription": data["subscription"],
+                                    "regist_time": data["regist_time"]}
+                        with open(f"file/account/{self.username.value}/info.json", "w") as f:
+                            json.dump(data2, f)
                             await interaction.response.send_message("アカウントを再連携しました。", ephemeral=True)
                     else:
                         await interaction.response.send_message("ユーザー名またはパスワードが間違っています。間違っていないかご確認の上、再度お試しください。\nそれでもログインできない場合はTettu0530New#7110までお願いします。", ephemeral=True)
@@ -474,6 +530,56 @@ class AccountLogin5Modal(discord.ui.Modal):
                     await interaction.response.send_message("ユーザー名またはパスワードが間違っています。間違っていないかご確認の上、再度お試しください。\nそれでもログインできない場合はTettu0530New#7110までお願いします。", ephemeral=True)
         except FileNotFoundError:
             await interaction.response.send_message("そのZeTNONアカウントは登録されていません。", ephemeral=True)
+
+
+class LoginButtonView(discord.ui.View):
+    def __init__(self, bot: commands.Bot, username: str):
+        super().__init__(timeout=None)
+        self.bot = bot
+        self.username = username
+
+    @discord.ui.button(label="🔃 ログインしたままにする", custom_id="keep_login_button", style=discord.ButtonStyle.primary)
+    async def keep_login_callback(self, button: discord.ui.Button, interaction: discord.Interaction):
+        with open(f"file/keep_login/{button.user.id}.json", "w", encoding="utf-8") as keep_f:
+            data = {
+                str(button.user.id): self.username
+            }
+            json.dump(data, keep_f)
+            await button.response.send_message("ログイン情報を保持するをONにしました。", ephemeral=True)
+    
+    @discord.ui.button(label="🛍️ 有料プランに契約する", custom_id="subscription_button", style=discord.ButtonStyle.secondary)
+    async def subscription_button_callback(self, button: discord.ui.Button, interaction: discord.Interaction):
+        if os.path.isfile(f"file/keep_login/{button.user.id}.json") is False:
+            await button.response.send_modal(SubscriptionLoginModal(bot=self.bot))
+        else:
+            with open(f"file/keep_login/{button.user.id}.json", "r") as keep_f:
+                data1 = json.load(keep_f)
+            with open(f"file/account/{data1[str(button.user.id)]}/info.json", "r") as account_f:
+                data = json.load(account_f)
+                await button.response.send_message(view=AccountSubscriptionSelectView(bot=self.bot, username=self.username), ephemeral=True)
+
+
+    @discord.ui.button(label="🔀 アカウント情報を変更する", custom_id="change_account_button", style=discord.ButtonStyle.primary)
+    async def changeaccount_button_callback(self, button: discord.ui.Button, interaction: discord.Interaction):
+        if os.path.isfile(f"file/keep_login/{button.user.id}.json") is False:
+            await button.response.send_modal(AccountChangeModal(bot=self.bot))
+        else:
+            with open(f"file/keep_login/{button.user.id}.json", "r") as keep_f:
+                data1 = json.load(keep_f)
+            with open(f"file/account/{data1[str(button.user.id)]}/info.json", "r") as account_f:
+                data = json.load(account_f)
+                await button.response.send_message(view=AccountChangeSelectView(bot=self.bot, username=self.username), ephemeral=True)
+    
+    @discord.ui.button(label="❌ アカウントを削除する", custom_id="delete_account_button", style=discord.ButtonStyle.danger)
+    async def delete_button_callback(self, button: discord.ui.Button, interaction: discord.Interaction):
+        if os.path.isfile(f"file/keep_login/{button.user.id}.json") is False:
+            await button.response.send_modal(AccountDeleteModal(bot=self.bot))
+        else:
+            with open(f"file/keep_login/{button.user.id}.json", "r") as keep_f:
+                data1 = json.load(keep_f)
+            with open(f"file/account/{data1[str(button.user.id)]}/info.json", "r") as account_f:
+                data = json.load(account_f)
+                await button.response.send_message("本当にアカウントを消去しますか？消去を押した後、**この操作は取り消せません**\n**__この操作に伴い、アカウントに保存されたデータ(バックアップ等)はすべて消去されます。__**", view=AccountDeleteConfirmButtonView(bot=self.bot, username=self.username), ephemeral=True)
 
 
 class AccountCog(commands.Cog):
@@ -495,39 +601,44 @@ class AccountCog(commands.Cog):
         await interaction.response.send_modal(AccountRegisterModal(bot=self.bot))
 
     @account.command(
-        name="info",
-        description="ZeTNONアカウントにアクセスします"
+        name="setting",
+        description="ZeTNONアカウント情報を編集します"
     )
     async def account_info(self, interaction: discord.Interaction):
-        await interaction.response.send_modal(AccountLoginModal(bot=self.bot))
+        if os.path.isfile(f"file/keep_login/{interaction.user.id}.json") is False:
+            await interaction.response.send_modal(AccountInfoModal_KeepLogin(bot=self.bot))
+        else:
+            with open(f"file/keep_login/{interaction.user.id}.json", "r") as keep_f:
+                data1 = json.load(keep_f)
+            with open(f"file/account/{data1[str(interaction.user.id)]}/info.json", "r") as account_f:
+                data = json.load(account_f)
+                embed = discord.Embed(
+                    title=f"{data['username']}のZeTNONアカウント")
+                user = self.bot.get_user(data["user_id"])
+                embed.set_thumbnail(url=data["user_avatar"])
+                embed.add_field(
+                    name="ユーザー名", value=f"{data['username']}", inline=False)
+                embed.add_field(
+                    name="パスワード", value=f"`機密保護のため閲覧できません`", inline=False)
+                if data["subscription"] == True:
+                    embed.add_field(
+                        name="有料プラン", value="有効(永久)", inline=False)
+                else:
+                    embed.add_field(
+                        name="有料プラン", value="無効", inline=False)
+                embed.add_field(
+                    name="登録ユーザー", value=f"{user.mention}", inline=False)
+                embed.set_footer(text="Status - 200 | Made by Tettu0530New#7110",
+                                 icon_url="https://cdn.discordapp.com/avatars/941871491337814056/fb276cd1dc430e643f233594564e0559.webp?size=128")
+                await interaction.response.send_message(embed=embed, view=LoginButtonView(bot=self.bot, username=data["username"]), ephemeral=True)
+            
 
-    @account.command(
-        name="change",
-        description="ZeTNONアカウントの登録情報を変えます"
-    )
-    async def account_change(self, interaction: discord.Interaction):
-        await interaction.response.send_modal(AccountLogin2Modal(bot=self.bot))
-    
-    @account.command(
-        name="delete",
-        description="ZeTNONアカウントを削除します"
-    )
-    async def account_delete(self, interaction: discord.Interaction):
-        await interaction.response.send_modal(AccountLogin4Modal(bot=self.bot))
-
-    @account.command(
-        name="subscription",
-        description="ZeTNONアカウントに有料プランを適応させます"
-    )
-    async def account_subscription(self, interaction: discord.Interaction):
-        await interaction.response.send_modal(AccountLogin3Modal(bot=self.bot))
-    
     @account.command(
         name="relink",
         description="ZeTNONアカウントとDiscordアカウントとの再連携をします"
     )
     async def account_relink(self, interaction: discord.Interaction):
-        await interaction.response.send_modal(AccountLogin5Modal(bot=self.bot))
+        await interaction.response.send_modal(AccountRelinkModal(bot=self.bot))
 
 
 async def setup(bot: commands.Bot):

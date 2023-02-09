@@ -2,6 +2,8 @@
 import json
 import typing
 import random
+import datetime
+import pytz
 
 # Import Discord Package
 import discord
@@ -102,6 +104,7 @@ class VerifyCog(commands.Cog):
         name="verify",
         description="計算式認証パネルを設置します"
     )
+    @app_commands.checks.cooldown(1, 10, key=lambda i:(i.guild_id, i.user.id))
     @app_commands.describe(role="認証完了後のロールを設定できます")
     @app_commands.describe(type="認証に使用するモードを選択できます(math=計算式認証 oneclick=ワンボタン認証)")
     @app_commands.describe(title="認証パネルのタイトルを設定できます")
@@ -146,7 +149,12 @@ class VerifyCog(commands.Cog):
                 json.dump(role_json, role_file)
             await interaction.response.send_message(embed=embed_success, ephemeral=True)
             await interaction.followup.send(embed=embed, view=VerifyButtonView(bot=self.bot))
-
+            print(f"[{datetime.datetime.now(tz=pytz.timezone('Asia/Tokyo')).strftime('%Y/%m/%d %H:%M:%S')}]{interaction.user.name}(ID:{interaction.user.id})がverifyコマンドをサーバー:{str(interaction.guild_id)}で使用しました。")
+        
+    @verify.error
+    async def verify_error(self, interaction: discord.Interaction, error: app_commands.AppCommandError):
+        if isinstance(error, app_commands.errors.CommandOnCooldown):
+            await interaction.response.send_message("コマンドはクールダウン中です！", ephemeral=True)
 
 async def setup(bot: commands.Bot):
     await bot.add_cog(VerifyCog(bot))

@@ -7,56 +7,54 @@ from discord import app_commands
 from discord.ext import commands
 
 embed0 = discord.Embed(
-    title="ZeTNON help", color=0x5946f1)
-embed0.add_field(name="/help", value="このhelpを表示します", inline=False)
-embed0.add_field(
-    name="/clean", value="実行したチャンネルのメッセージログを消去します(※サーバー管理者専用)", inline=False)
-embed0.add_field(
-    name="/nuke", value="チャンネルの位置や権限、名前などををそのままにしてチャンネルをきれいに消して再生成します(※サーバー管理者専用)", inline=False)
-embed0.add_field(name="/ban <Mention>",
-                 value="メンションしたユーザーをBAN(アクセス禁止)します(※サーバー管理者専用)", inline=False)
-embed0.add_field(name="/kick <Mention>",
-                 value="メンションしたユーザーをキックします(※サーバー管理者専用)", inline=False)
-embed0.set_footer(text="Page 1/3")
-
+    title="ZeTNON help(アカウントコマンド系)", color=0x5946f1)
+embed0.add_field(name="/account register",
+                 value="ZeTNONアカウントを登録します", inline=False)
+embed0.add_field(name="/account setting",
+                 value="ZeTNONアカウント情報を変更します", inline=False)
 embed0_1 = discord.Embed(
-    title="ZeTNON help", color=0x5946f1)
+    title="ZeTNON help(サーバー管理コマンド系)", color=0x5946f1)
 embed0_1.add_field(
-    name="/info guild", value="サーバー情報が送信されます", inline=False)
+    name="/clean", value="コマンドを実行したチャンネルのチャンネルログを消去します", inline=False)
 embed0_1.add_field(
-    name="/verify", value="計算認証・ワンクリック認証のどちらかで認証を行います", inline=False)
+    name="/nuke", value="コマンドを実行したチャンネルのチャンネルログを消去します(**BotやWebhookをチャンネルに紐づけている場合は/cleanを実行することをおすすめします**)", inline=False)
 embed0_1.add_field(
-    name="/music join", value="Botをユーザーが接続中のボイスチャットに接続させます", inline=False)
-embed0_1.add_field(name="/play <YoutubeURLまたは検索ワード>",
-                   value="入力されたしたYoutubeの動画名・URLから音楽をストリームで再生します", inline=False)
+    name="/kick", value="指定したユーザーをサーバーから追放します", inline=False)
 embed0_1.add_field(
-    name="/music leave", value="Botをユーザーが接続中のボイスチャットから切断させます", inline=False)
-embed0_1.set_footer(text="Page 2/3")
-
+    name="/ban", value="指定したユーザーをコマンドを実行したサーバーへの参加を禁止します", inline=False)
+embed0_1.add_field(
+    name="/verify", value="ロールを付与する認証パネルを設置します", inline=False)
 embed0_2 = discord.Embed(
-    title="ZeTNON help", color=0x5946f1)
-embed0_2.add_field(
-    name="/music pause", value="再生中の音楽を一時停止ます", inline=False)
-embed0_2.add_field(
-    name="/music resume", value="一時停止中の音楽を再開させます", inline=False)
-embed0_2.add_field(
-    name="/music stop", value="再生中/一時停止中の音楽を停止させます", inline=False)
-embed0_2.add_field(name="/user <Mention>",
-                   value="メンションしたユーザーの情報を送信します", inline=False)
-embed0_2.add_field(
-    name="/ticket", value="チケットを発行できるパネルを設置します", inline=False)
-embed0_2.set_footer(text="Page 3/3")
+    title="ZeTNON help(サーバー管理コマンド系2)", color=0x5946f1)
+embed0_2.add_field(name="/ticket set",
+                   value="チケットパネルを設置できます", inline=False)
+embed0_2.add_field(name="/ticket config",
+                   value="チケットパネルの設定を変更します", inline=False)
+embed0_3 = discord.Embed(
+    title="ZeTNON help(音楽コマンド系)", color=0x5946f1)
+embed0_3.add_field(name="/music join",
+                   value="ユーザーがいるボイスチャンネルに参加します", inline=False)
+embed0_3.add_field(name="/music leave",
+                   value="今参加しているボイスチャンネルから退出します", inline=False)
+embed0_3.add_field(
+    name="/music play", value="入力したワードまたはYouTube動画URLの音楽を再生します", inline=False)
+embed0_3.add_field(name="/music pause",
+                   value="再生中の音楽を一時停止します", inline=False)
+embed0_3.add_field(name="/music resume",
+                   value="一時停止中の音楽を再開します", inline=False)
 
 
 class ChangeHelpPageSelect(discord.ui.Select):
     def __init__(self, bot: commands.Bot, res: discord.InteractionMessage):
         options = [
             discord.SelectOption(
-                label="1", description="1ページ目(サーバー管理者用コマンド)", value="1"),
+                label="1", description="1ページ目(アカウントコマンド系)", value="1"),
             discord.SelectOption(
-                label="2", description="2ページ目(サーバー管理者用コマンド2)", value="2"),
+                label="2", description="2ページ目(サーバー管理コマンド系1)", value="2"),
             discord.SelectOption(
-                label="3", description="3ページ目(音楽関係のコマンド)", value="3")
+                label="3", description="3ページ目(サーバー管理コマンド系2)", value="3"),
+            discord.SelectOption(
+                label="4", description="4ページ目(音楽コマンド系)", value="4")
         ]
         super().__init__(
             placeholder="選択してください",
@@ -92,8 +90,9 @@ class HelpCog(commands.Cog):
         description="Botのヘルプを表示します"
     )
     async def help(self, interaction: discord.Interaction):
-        contents = [embed0, embed0_1, embed0_2]
-        pages = 3
+
+        contents = [embed0, embed0_1, embed0_2, embed0_3]
+        pages = 4
         cur_pages = 1
         await interaction.response.send_message(embed=contents[cur_pages - 1])
         res: discord.InteractionMessage = await interaction.original_response()

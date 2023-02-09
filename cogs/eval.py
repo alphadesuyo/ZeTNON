@@ -10,7 +10,7 @@ import io
 
 conf = configparser.ConfigParser()
 conf.read("file/conf/config.ini", encoding="utf-8")
-MANAGE_USERS = eval(conf["MAIN"]["MANAGE_USER"])
+MANAGE_USERS = [941871491337814056, 935563914354253924, 994953877625507851, 1044937269162823751]
 
 # Import Discord Package
 

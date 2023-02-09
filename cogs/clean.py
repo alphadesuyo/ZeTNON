@@ -17,7 +17,7 @@ class CleanConfirmButtonView(discord.ui.View):
             title="✅ Success - Clean", description="正常にチャンネルログを消去しました。\nこのメッセージは10秒後に消去されます", color=0x00ff00)
         embed_cleaned.set_footer(text="Status - 200 | Made by Tettu0530#0530",
                                  icon_url="https://cdn.discordapp.com/avatars/941871491337814056/fb276cd1dc430e643f233594564e0559.webp?size=128")
-        i = await button.response.send_message(embed=embed_cleaned)
+        i = await button.channel.send(embed=embed_cleaned)
         await asyncio.sleep(10)
         await i.delete()
 
@@ -43,7 +43,7 @@ class CleanCog(commands.Cog):
             embed = discord.Embed(title="✅ 確認 | Confirm", description="本当にチャンネルログを消去しますか？\n**消去を押した後操作は取り消せません**", color=0xffff00)
             embed.set_footer(text="Status - 200 | Made by Tettu0530#0530",
                                      icon_url="https://cdn.discordapp.com/avatars/941871491337814056/fb276cd1dc430e643f233594564e0559.webp?size=128")
-            await interaction.response.send_message(embed=embed, view=CleanConfirmButtonView(bot=self.bot))
+            await interaction.response.send_message("本当にチャンネルログを消去しますか？", view=CleanConfirmButtonView(bot=self.bot))
 
 async def setup(bot: commands.Bot):
     await bot.add_cog(CleanCog(bot))
