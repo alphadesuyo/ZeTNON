@@ -15,9 +15,20 @@ Tettu0530が作成したDiscordBotであるZeTNONのソースです。
 
 **GNU GPL V3.0**(LISENCE参照)
 
-(要するに「自己責任で使え」「著作権の表示は消すな」「複製・改変・再配布・販売等は自由にやれ」「再配布する物もGPLライセンスにしろ」です)
 
-
+現在搭載されている機能一覧
+- [x] アカウント
+- [x] アンチトークン
+- [x] チャンネルログ消去
+- [x] ヘルプ
+- [x] サーバー情報・ユーザー情報・マインクラフトサーバー情報表示
+- [x] チケットパネル
+- [x] 認証パネル
+- [x] 音楽再生
+- [x] PayPay自動販売機
+- [ ] ユーザー・サーバーバックアップ
+- [ ] ユーザー・サーバーバックアップ復元
+- [ ] ツイッターアカウント情報表示
 
 
 The source of ZeTNON, a DiscordBot created by Tettu0530.
@@ -35,4 +46,17 @@ license
 
 **GNU GPL V3.0** (See LISENCE)
 
-(In short, `Use at your own risk`, `Don't erase the copyright notice`, `Reproduce, modify, redistribute, sell, etc. freely` and `Redistribute things under the GPL license`)
+
+List of currently installed functions
+- [x] accounts
+- [x] Anti-Token
+- [x] Clear Channel Log
+- [x] help
+- [x] Display server information, user information, and Minecraft server information
+- [x] Ticket panel
+- [x] verification panel
+- [x] music playback
+- [x] PayPay vending machines
+- [ ] User/Server Backup
+- [ ] Restore user/server backup
+- [ ] Twitter account information display
